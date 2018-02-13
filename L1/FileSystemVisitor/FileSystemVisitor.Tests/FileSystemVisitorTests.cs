@@ -1,49 +1,98 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO.Abstractions;
+using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 using Unity;
 
 namespace FileSystemVisitor.Tests
 {
-	/// <summary>
-	/// Unit tests for <see cref="FileSystemVisitor"/>
-	/// </summary>
-	[TestClass]
 	public class FileSystemVisitorTests
 	{
 		private IUnityContainer _container;
 
-		/// <summary>
-		/// Test initialization
-		/// </summary>
-		[TestInitialize]
+		private readonly IList<string> _testDirectories = new List<string>
+		{
+			@"Root\DirA",
+			@"Root\DirB",
+			@"Root\DirC",
+			@"Root\DirA\SubDirA",
+			@"Root\DirA\SubDirA2",
+			@"Root\DirB\SubDirB",
+			@"Root\DirC\SubDirC",
+		};
+
+		private readonly IList<string> _testFiles = new List<string>
+		{
+			@"Root\FileA",
+			@"Root\FileA2",
+			@"Root\FileB",
+			@"Root\FileC",
+			@"Root\DirA\SubFileA",
+			@"Root\DirB\SubFileB",
+			@"Root\DirC\SubFileC",
+		};
+
+		[SetUp]
 		public void Setup()
 		{
 			_container = new UnityContainer();
 			_container.RegisterType<IFileSystemVisitor, FileSystemVisitor>();
+
+			var fs = new MockFileSystem();
+
+			foreach (var testDirectory in _testDirectories)
+			{
+				fs.AddDirectory(testDirectory);
+			}
+
+			foreach (var testFile in _testFiles)
+			{
+				fs.AddFile(testFile, new MockFileData(string.Empty));
+			}
+
+			_container.RegisterInstance(typeof(IFileSystem), fs);
 		}
 
-		/// <summary>
-		/// Checks that <see cref="FileSystemVisitor"/> is failed on non initialized state
-		/// </summary>
-		[TestMethod]
-		public void FileSystemVisitorShouldBeFailedOnNonInitializedState()
+		[Test]
+		public void FileSystemVisitorShouldBeFailedOnNullOrEmptyPath()
 		{
 			var visitor = _container.Resolve<IFileSystemVisitor>();
-			//var e = Environment;
-
-			Assert.ThrowsException<Exception>(() => visitor.ToList());
+			
+			Assert.Throws<ArgumentException>(() => visitor.Enumerate(null));
+			Assert.Throws<ArgumentException>(() => visitor.Enumerate(string.Empty));
 		}
 
-		/// <summary>
-		/// Checks that <see cref="FileSystemVisitor"/> is failed on non existing directory configuration
-		/// </summary>
-		[TestMethod]
+		[Test]
 		public void FileSystemVisitorShouldBeFailedOnNonExistingDirectory()
 		{
 			var visitor = _container.Resolve<IFileSystemVisitor>();
 
-			Assert.ThrowsException<Exception>(() => visitor.Initialize(@"QWERTY:\fictional directory\and one more\"));
+			Assert.Throws<ArgumentException>(() => visitor.Enumerate(@"QWERTY:\fictional directory\and one more\"));
+		}
+
+		[Test]
+		public void FileSystemVisitorShouldEnumerateAllFileSystemEntires()
+		{
+			//Arrange
+			var visitor = _container.Resolve<IFileSystemVisitor>();
+			var fs = _container.Resolve<IFileSystem>();
+
+			IList<string> foundEntries = new List<string>();
+
+			List<string> expectedEntries = _testDirectories.ToList();
+			expectedEntries.AddRange(_testFiles);
+
+			//Act
+			foreach (FileSystemInfoBase entry in visitor.Enumerate("Root"))
+			{
+				foundEntries.Add(entry.FullName.Replace(fs.Directory.GetCurrentDirectory(), string.Empty)); //cut beggining of a path
+			}
+
+			//Assert
+			var diff = foundEntries.Except(expectedEntries);
+			Assert.AreEqual(0, diff.Count());
 		}
 	}
 }

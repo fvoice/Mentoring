@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
+using System.IO.Abstractions;
 
 namespace FileSystemVisitor
 {
-	public interface IFileSystemVisitor : IEnumerable<FileSystemInfo>
+	public interface IFileSystemVisitor
 	{
 		event EventHandler<EventArgs> OnStart;
 
-		void Initialize(string directory);
+		IEnumerable<FileSystemInfoBase> Enumerate(string startPath);
 	}
 }

@@ -2,41 +2,36 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Abstractions;
 
 namespace FileSystemVisitor
 {
 	public class FileSystemVisitor : IFileSystemVisitor
 	{
-		private string _directory;
+		private readonly IFileSystem _fileSystem;
+
+		public FileSystemVisitor(IFileSystem fileSystem)
+		{
+			_fileSystem = fileSystem;
+		}
 
 		public event EventHandler<EventArgs> OnStart;
 
-		public void Initialize(string directory)
+		public IEnumerable<FileSystemInfoBase> Enumerate(string startPath)
 		{
-			_directory = directory;
-			EnsureWellConfigured();
+			CheckPath(startPath);
+			return _fileSystem.DirectoryInfo.FromDirectoryName(startPath).EnumerateFileSystemInfos("*", SearchOption.AllDirectories);
 		}
 
-		public IEnumerator<FileSystemInfo> GetEnumerator()
+		private void CheckPath(string startPath)
 		{
-			EnsureWellConfigured();
-			return null;
-		}
-
-		IEnumerator IEnumerable.GetEnumerator()
-		{
-			return GetEnumerator();
-		}
-
-		private void EnsureWellConfigured()
-		{
-			if (string.IsNullOrEmpty(_directory))
+			if (string.IsNullOrEmpty(startPath))
 			{
-				throw new Exception("Directory mustn't be empty");
+				throw new ArgumentException("_startPath mustn't be empty");
 			}
-			if (!Directory.Exists(_directory))
+			if (!_fileSystem.Directory.Exists(startPath))
 			{
-				throw new Exception("Directory must exist");
+				throw new ArgumentException("_startPath must exist");
 			}
 		}
 	}
