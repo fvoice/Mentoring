@@ -125,26 +125,10 @@ namespace FileSystemVisitor.Tests
 
 			visitor.Start += (sender, args) => raisedEvents.Add(nameof(visitor.Start));
 			visitor.Finish += (sender, args) => raisedEvents.Add(nameof(visitor.Finish));
-			visitor.FileFound += (sender, args) =>
-			{
-				raisedEvents.Add(nameof(visitor.FileFound));
-				expectedRaisedEvents++;
-			};
-			visitor.DirectoryFound += (sender, args) =>
-			{
-				raisedEvents.Add(nameof(visitor.DirectoryFound));
-				expectedRaisedEvents++;
-			};
-			visitor.FilteredFileFound += (sender, args) =>
-			{
-				raisedEvents.Add(nameof(visitor.FilteredFileFound));
-				expectedRaisedEvents++;
-			};
-			visitor.FilteredDirectoryFound += (sender, args) =>
-			{
-				raisedEvents.Add(nameof(visitor.FilteredDirectoryFound));
-				expectedRaisedEvents++;
-			};
+			visitor.FileFound += (sender, args) => raisedEvents.Add(nameof(visitor.FileFound));
+			visitor.DirectoryFound += (sender, args) => raisedEvents.Add(nameof(visitor.DirectoryFound));
+			visitor.FilteredFileFound += (sender, args) => raisedEvents.Add(nameof(visitor.FilteredFileFound));
+			visitor.FilteredDirectoryFound += (sender, args) => raisedEvents.Add(nameof(visitor.FilteredDirectoryFound));
 
 			var dirFoundEventsAmount = TestEntires.Count(x => !x.Contains("File"));
 			var fileFoundEventsAmount = TestEntires.Count(x => x.Contains("File"));
@@ -153,7 +137,9 @@ namespace FileSystemVisitor.Tests
 
 			var filteredDirFoundEventsAmount = expectedFileredEntries.Count(x => !x.Contains("File"));
 			var filteredFileFoundEventsAmount = expectedFileredEntries.Count(x => x.Contains("File"));
-			
+
+			expectedRaisedEvents = expectedRaisedEvents + dirFoundEventsAmount + fileFoundEventsAmount + filteredDirFoundEventsAmount + filteredFileFoundEventsAmount;
+
 			//Act
 			// ReSharper disable once UnusedVariable
 			IList<string> foundEntries = visitor.Enumerate("Root").Select(x => x.FullName.Replace(CurrentDirectory, string.Empty)).ToList();
